@@ -1,12 +1,18 @@
 {
-  "name": "tax-invoice-app",
+  "name": "tax-invoice-analyzer",
   "version": "1.0.0",
-  "description": "A simple server to host the tax invoice analyzer.",
+  "description": "A web application designed to analyze tax invoice documents",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "dev": "node app.js"
   },
-  "author": "",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "keywords": ["tax", "invoice", "analyzer", "web-app"],
+  "author": "Your Name",
   "license": "ISC",
   "dependencies": {
     "express": "^4.18.2"
