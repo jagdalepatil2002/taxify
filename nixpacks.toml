@@ -1,0 +1,5 @@
+[start]
+cmd = "node app.js"
+
+[variables]
+NODE_ENV = "production"
