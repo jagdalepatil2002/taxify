@@ -1,0 +1,14 @@
+{
+  "name": "tax-invoice-app",
+  "version": "1.0.0",
+  "description": "A simple server to host the tax invoice analyzer.",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
