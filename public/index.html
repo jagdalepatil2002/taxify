@@ -97,7 +97,7 @@
             paymentOptions: [{ icon: '🌐', title: "Online Payment", details: ["Website: www.irs.gov/payments", "Amount Due: $9,533.53", "Options: Bank transfer, debit/credit card", "Status: ✅ Available 24/7"] }, { icon: '📞', title: "Phone Payment", details: ["Number: 1-888-PAY-1040", "Hours: 24/7 automated system", "Status: ✅ Immediate processing"] }, { icon: '📮', title: "Mail Payment", details: ["Address: Internal Revenue Service P.O. Box 1218 Charlotte, NC 28201-1218", "Include: Payment voucher from notice", "Status: ⚠️ May be too slow for this notice"] }, { icon: '📅', title: "Payment Plan Setup", details: ["Online: www.irs.gov/paymentplan", "Setup Fee: $31 online, $149 phone/mail", "Status: ✅ Prevents collection actions"] },],
             help: { irsPhone: "1-800-829-0922", tas: "The Taxpayer Advocate Service (TAS) can help protect your taxpayer rights. Visit www.taxpayeradvocate.irs.gov or call 1-877-777-4778." },
             emailTemplate: `Subject: Important: Action Required - Second IRS notice balance due to be paid\n\nDear [Taxpayer Name],\n\nYou have received the: CP503 (Second Notice) for Tax Year: 2016 indicating a balance due for $9,533.53.\n\nThis is the second reminder, and it's crucial that you take action promptly to avoid further penalties, interest charges, or enforced collection efforts such as a federal tax lien.\n\nIf you have any questions or need assistance, please don't hesitate to contact me.\n\nBest regards,\n[Your Name]`,
-            irsResponseTemplate: `Internal Revenue Service\n[IRS Processing Center Address from Notice]\n\nRe: Notice CP503 - Second Notice Response\nTaxpayer: [Taxpayer Name]\nSSN: XXX-XX-[Last 4 digits]\nTax Year: 2016\nNotice Date: [Notice Date]\n\nDear IRS Representative,\n\nI am writing in response to the CP503 notice dated [Notice Date] regarding an unpaid tax balance of $9,533.53 for tax year 2016.\n\n[SELECT RESPONSE OPTION]\n\nSincerely,\n[Signature]\n[Printed Name]`
+            irsResponseTemplate: `Internal Revenue Service\n[IRS Processing Center Address from Notice]\n\nRe: Notice CP503 - Second Notice Response\nTaxpayer: [Taxpayer Name]\nSSN: XXX-XX-[Last 4 digits]\nTax Year: 2016\nNotice Date: [Notice Date]\n\nDear IRS Representative,\n\nI am writing in response to the CP503 notice dated [Notice Date] regarding an unpaid tax balance of $9,533.53 for tax year 2016.\n\n[INSTRUCTIONS: Please select and keep only ONE of the options below and delete the others.]\n\n---\nOption 1: Payment is enclosed.\nEnclosed is my check for the full amount of $9,533.53. Please apply it to my outstanding balance for tax year 2016.\n\n---\nOption 2: I have already paid this amount.\nI believe there is an error, as I have already submitted payment for this balance. Payment was sent on [Date of Payment] via [Payment Method, e.g., check, online payment]. A copy of my payment confirmation is enclosed. Please investigate and update my account status.\n\n---\nOption 3: I cannot pay the full amount now and request a payment plan.\nI am unable to pay the full amount at this time. I would like to request an installment agreement. I have visited irs.gov/paymentplan to review my options and have enclosed Form 9465, Installment Agreement Request.\n\n---\nOption 4: I disagree with the amount you say I owe.\nI disagree with the amount shown on the notice. I believe the correct amount is [Your Calculated Amount] because [Briefly explain why you disagree, e.g., a payment was not credited, a deduction was disallowed in error]. Please find my supporting documentation enclosed for your review.\n\nSincerely,\n[Signature]\n[Printed Name]`
         };
 
         const countryCodes = [
@@ -143,6 +143,7 @@
             isPasswordVisible: false,
             isDropdownOpen: false,
             countrySearch: '',
+            activeAccordion: null,
             formData: {
                 firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
                 dob: '', mobileNumber: '', countryCode: '+1'
@@ -349,6 +350,66 @@
             `;
         }
 
+        function getAccordionContent(sectionId) {
+            const data = state.summaryData;
+            if (!data) return '';
+
+            switch (sectionId) {
+                case 'summary':
+                    return `<div>
+                        <p class="text-slate-600 mb-4">${data.summary?.overview}</p>
+                        <h4 class="font-bold text-black mb-2">Key Points:</h4>
+                        <ul class="list-disc list-inside space-y-1 text-slate-600">
+                            ${data.summary?.keyPoints?.map(p => `<li>${p}</li>`).join('')}
+                        </ul>
+                    </div>`;
+                case 'why':
+                    return `<div>
+                        ${data.why?.map(item => `<div class="mb-4 last:mb-0">
+                            <h4 class="font-bold text-black">${item.title}</h4>
+                            ${item.isClickable ? `<p class="text-slate-600 underline cursor-pointer hover:text-orange-500" onclick="handleSaltModal()">${item.text}</p>` : `<p class="text-slate-600">${item.text}</p>`}
+                        </div>`).join('')}
+                    </div>`;
+                case 'breakdown':
+                    return `<div>
+                        <table class="w-full text-sm mb-4 text-black">
+                            <tbody>
+                                ${data.breakdown?.items?.map(item => `<tr class="border-b ${item.isTotal ? 'font-bold' : ''}" style="border-color: #F1F5F9">
+                                    <td class="p-2">${item.item}</td>
+                                    <td class="p-2 text-right font-mono ${item.isTotal ? 'text-orange-500' : ''}">${item.amount}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                        <div class="space-y-4">
+                            ${data.breakdown?.notes?.map(note => `<div>
+                                <h5 class="font-bold text-black">${note.title || ''}</h5>
+                                <p class="text-sm text-slate-600">${note.text || note}</p>
+                            </div>`).join('')}
+                        </div>
+                    </div>`;
+                case 'fix':
+                    return `<div>
+                        ${data.fix?.steps?.map(item => `<div class="mb-4 last:mb-0">
+                            <h4 class="font-bold text-black">${item.title}</h4>
+                            <ul class="list-disc list-inside text-slate-600">
+                                ${item.points.map(p => `<li>${p}</li>`).join('')}
+                            </ul>
+                        </div>`).join('')}
+                    </div>`;
+                case 'payment':
+                   return `<div class="grid md:grid-cols-2 gap-4">
+                        ${data.paymentOptions?.map(item => `<div class="bg-white p-4 rounded-lg border border-slate-200">
+                            <h4 class="font-bold text-black flex items-center gap-2"><span class="text-xl">${item.icon}</span>${item.title}</h4>
+                            <ul class="text-sm text-slate-600 mt-2 space-y-1">
+                                ${item.details.map(d => `<li>${d}</li>`).join('')}
+                            </ul>
+                        </div>`).join('')}
+                    </div>`;
+                default:
+                    return '';
+            }
+        }
+
         function renderSummaryScreen() {
             const data = state.summaryData;
             const accentColor = '#ff6b00';
@@ -371,58 +432,61 @@
             ];
 
             return `
-                <div class="w-full font-sans">
-                    <div class="container max-w-4xl mx-auto">
-                        <div class="header text-center mb-8">
-                            <h1 class="text-black text-4xl font-bold mb-2">IRS Notice Analysis</h1>
-                            <p class="text-slate-500 text-lg">Professional breakdown and action plan for your tax notice</p>
+                <div class="w-full max-w-6xl mx-auto animate-fade-in my-8">
+                    <div class="header text-center mb-8">
+                        <h1 class="text-black text-4xl font-bold mb-2">IRS Notice Analysis</h1>
+                        <p class="text-slate-500 text-lg">Professional breakdown and action plan for your tax notice</p>
+                    </div>
+                    <div class="bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+                        <div class="notice-header text-white p-8 text-center relative" style="background-color: ${accentColor}">
+                            <div class="notice-title text-2xl font-bold mb-4 relative z-10">Summary of Your ${data.taxYear} IRS Notice ${data.noticeType}</div>
+                            <div class="notice-type bg-white bg-opacity-20 px-4 py-2 rounded-full inline-block font-semibold relative z-10">Analysis Complete</div>
                         </div>
-                        <div class="notice-container bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
-                            <div class="notice-header text-white p-8 text-center relative" style="background-color: ${accentColor}">
-                                <div class="notice-title text-2xl font-bold mb-4 relative z-10">Summary of Your ${data.taxYear} IRS Notice ${data.noticeType}</div>
-                                <div class="notice-type bg-white bg-opacity-20 px-4 py-2 rounded-full inline-block font-semibold relative z-10">Analysis Complete</div>
+                        <div class="notice-body p-8">
+                            <div class="client-info bg-slate-50 rounded-xl p-6 mb-8 border-l-4" style="border-color: ${accentColor}">
+                                <div class="client-name text-xl font-bold text-black mb-1">${data.noticeFor}</div>
+                                <div class="client-address text-slate-600 mb-4 whitespace-pre-line">${data.address}</div>
+                                <div class="ssn-info text-sm text-slate-500">Social Security Number: ${data.ssn}</div>
+                                <div class="ssn-info text-sm mt-2 font-bold" style="color: ${accentColor}">Tax Year: ${data.taxYear}</div>
                             </div>
-                            <div class="notice-body p-8">
-                                <div class="client-info bg-slate-50 rounded-xl p-6 mb-8 border-l-4" style="border-color: ${accentColor}">
-                                    <div class="client-name text-xl font-bold text-black mb-1">${data.noticeFor}</div>
-                                    <div class="client-address text-slate-600 mb-4 whitespace-pre-line">${data.address}</div>
-                                    <div class="ssn-info text-sm text-slate-500">Social Security Number: ${data.ssn}</div>
-                                    <div class="ssn-info text-sm mt-2 font-bold" style="color: ${accentColor}">Tax Year: ${data.taxYear}</div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                                <div class="p-6 rounded-xl text-white text-center shadow-lg flex flex-col justify-center" style="background: linear-gradient(135deg, #ff6b00 0%, #ff8533 100%)">
+                                    <div class="text-sm opacity-90 mb-2">Total Amount Due</div>
+                                    <div class="text-4xl font-bold mb-3">${data.amountDue}</div>
                                 </div>
-                                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                    <div class="p-6 rounded-xl text-white text-center shadow-lg flex flex-col justify-center" style="background: linear-gradient(135deg, #ff6b00 0%, #ff8533 100%)">
-                                        <div class="text-sm opacity-90 mb-2">Total Amount Due</div>
-                                        <div class="text-4xl font-bold mb-3">${data.amountDue}</div>
+                                <div class="p-6 rounded-xl text-black text-center shadow-lg flex flex-col justify-center" style="background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%)">
+                                    <div class="text-sm opacity-80 mb-2">Payment Due Date</div>
+                                    <div class="text-3xl font-bold mb-3">${data.payBy}</div>
+                                    <div class="inline-flex items-center justify-center gap-2 font-bold text-sm self-center">
+                                        <span class="text-lg">⏰</span> Immediate Action Required
                                     </div>
-                                    <div class="p-6 rounded-xl text-black text-center shadow-lg flex flex-col justify-center" style="background: linear-gradient(135deg, #ffc107 0%, #ffb300 100%)">
-                                        <div class="text-sm opacity-80 mb-2">Payment Due Date</div>
-                                        <div class="text-3xl font-bold mb-3">${data.payBy}</div>
-                                        <div class="inline-flex items-center justify-center gap-2 font-bold text-sm self-center">
-                                            <span class="text-lg">⏰</span> Immediate Action Required
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                ${infoTiles.map(tile => `
+                                    <div data-id="${tile.id}" class="info-tile bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-300 overflow-hidden">
+                                        <div class="info-tile-header p-4 cursor-pointer flex items-center gap-4">
+                                            <div class="text-2xl" style="color: ${accentColor}">${tile.icon}</div>
+                                            <div class="flex-1">
+                                                <p class="text-base font-semibold text-black">${tile.title}</p>
+                                                <p class="text-slate-500 text-sm">${tile.preview}</p>
+                                            </div>
+                                            <button class="text-orange-500 text-xl font-bold transform transition-transform duration-300 ${state.activeAccordion === tile.id ? 'rotate-90' : ''}">▶</button>
                                         </div>
-                                    </div>
-                                </div>
-                                <div class="space-y-4">
-                                    ${infoTiles.map(tile => `
-                                        <div data-id="${tile.id}" class="info-tile bg-white rounded-lg border border-slate-200 hover:shadow-md transition-all duration-300">
-                                            <div class="p-4 cursor-pointer flex items-center gap-4">
-                                                <div class="text-2xl" style="color: ${accentColor}">${tile.icon}</div>
-                                                <div class="flex-1">
-                                                    <p class="text-base font-semibold text-black">${tile.title}</p>
-                                                    <p class="text-slate-500 text-sm">${tile.preview}</p>
-                                                </div>
-                                                <button class="text-orange-500 text-xl font-bold transform transition-transform hover:scale-110">▶</button>
+                                        <div class="transition-all duration-500 ease-in-out ${state.activeAccordion === tile.id ? 'max-h-screen' : 'max-h-0'}">
+                                            <div class="p-6 border-t border-slate-200 bg-slate-50">
+                                                ${getAccordionContent(tile.id)}
                                             </div>
                                         </div>
-                                    `).join('')}
-                                </div>
-                                <div class="text-center mt-8 pt-6 border-t border-slate-200">
-                                    <div class="flex justify-center gap-4 mb-4">
-                                        <button id="email-btn" class="font-semibold py-2 px-5 rounded-lg transition-colors bg-orange-500 text-white hover:bg-orange-600" style="background-color: ${accentColor}">Email to Taxpayer</button>
-                                        <button id="irs-response-btn" class="font-semibold py-2 px-5 rounded-lg transition-colors bg-orange-500 text-white hover:bg-orange-600" style="background-color: ${accentColor}">Draft IRS Response</button>
                                     </div>
-                                    <button id="reset-app-btn" class="font-bold py-3 px-8 rounded-lg transition-colors bg-orange-500 text-white hover:bg-orange-600" style="background-color: ${accentColor}">Analyze Another Notice</button>
+                                `).join('')}
+                            </div>
+                            <div class="text-center mt-8 pt-6 border-t border-slate-200">
+                                <div class="flex justify-center gap-4 mb-4">
+                                    <button id="email-btn" class="font-semibold py-2 px-5 rounded-lg transition-colors bg-orange-500 text-white hover:bg-orange-600" style="background-color: ${accentColor}">Email to Taxpayer</button>
+                                    <button id="irs-response-btn" class="font-semibold py-2 px-5 rounded-lg transition-colors bg-orange-500 text-white hover:bg-orange-600" style="background-color: ${accentColor}">Draft IRS Response</button>
                                 </div>
+                                <button id="reset-app-btn" class="font-bold py-3 px-8 rounded-lg transition-colors bg-orange-500 text-white hover:bg-orange-600" style="background-color: ${accentColor}">Analyze Another Notice</button>
                             </div>
                         </div>
                     </div>
@@ -573,106 +637,51 @@
             state.countrySearch = '';
             renderView();
         }
-
-        function handleSummaryModal(sectionId) {
-            const data = state.summaryData;
-            let title = '';
-            let contentHTML = '';
-
-            switch (sectionId) {
-                case 'summary':
-                    title = 'Understanding Your Notice';
-                    contentHTML = `<div>
-                        <p class="text-slate-600 mb-4">${data.summary?.overview}</p>
-                        <h4 class="font-bold text-black mb-2">Key Points:</h4>
-                        <ul class="list-disc list-inside space-y-1 text-slate-600">
-                            ${data.summary?.keyPoints?.map(p => `<li>${p}</li>`).join('')}
-                        </ul>
-                    </div>`;
-                    break;
-                case 'why':
-                    title = 'Why did I receive this?';
-                    contentHTML = `<div>
-                        ${data.why?.map(item => `<div class="mb-4 last:mb-0">
-                            <h4 class="font-bold text-black">${item.title}</h4>
-                            ${item.isClickable ? `<p class="text-slate-600 underline cursor-pointer hover:text-orange-500" onclick="handleSaltModal()">${item.text}</p>` : `<p class="text-slate-600">${item.text}</p>`}
-                        </div>`).join('')}
-                    </div>`;
-                    break;
-                case 'breakdown':
-                    title = 'Amount Breakdown';
-                    contentHTML = `<div>
-                        <table class="w-full text-sm mb-4 text-black">
-                            <tbody>
-                                ${data.breakdown?.items?.map(item => `<tr class="border-b ${item.isTotal ? 'font-bold' : ''}" style="border-color: #F1F5F9">
-                                    <td class="p-2">${item.item}</td>
-                                    <td class="p-2 text-right font-mono ${item.isTotal ? 'text-orange-500' : ''}">${item.amount}</td>
-                                </tr>`).join('')}
-                            </tbody>
-                        </table>
-                        <div class="space-y-4">
-                            ${data.breakdown?.notes?.map(note => `<div>
-                                <h5 class="font-bold text-black">${note.title || ''}</h5>
-                                <p class="text-sm text-slate-600">${note.text || note}</p>
-                            </div>`).join('')}
-                        </div>
-                    </div>`;
-                    break;
-                case 'fix':
-                    title = 'How should I fix this?';
-                    contentHTML = `<div>
-                        ${data.fix?.steps?.map(item => `<div class="mb-4 last:mb-0">
-                            <h4 class="font-bold text-black">${item.title}</h4>
-                            <ul class="list-disc list-inside text-slate-600">
-                                ${item.points.map(p => `<li>${p}</li>`).join('')}
-                            </ul>
-                        </div>`).join('')}
-                    </div>`;
-                    break;
-                case 'payment':
-                    title = 'Payment Options';
-                    contentHTML = `<div class="grid md:grid-cols-2 gap-4">
-                        ${data.paymentOptions?.map(item => `<div class="bg-white p-4 rounded-lg border border-slate-200">
-                            <h4 class="font-bold text-black flex items-center gap-2"><span class="text-xl">${item.icon}</span>${item.title}</h4>
-                            <ul class="text-sm text-slate-600 mt-2 space-y-1">
-                                ${item.details.map(d => `<li>${d}</li>`).join('')}
-                            </ul>
-                        </div>`).join('')}
-                    </div>`;
-                    break;
-            }
-            showModal(title, contentHTML);
-        }
         
+        function handleAccordionToggle(sectionId) {
+            if (state.activeAccordion === sectionId) {
+                state.activeAccordion = null;
+            } else {
+                state.activeAccordion = sectionId;
+            }
+            renderView();
+        }
+
         function copyToClipboard(text) {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed";
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.opacity = "0";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
             try {
-                navigator.clipboard.writeText(text).then(() => {
-                    showToast('Copied to clipboard!', 'success');
-                });
+                document.execCommand('copy');
+                showToast('Copied to clipboard!', 'success');
             } catch (err) {
                 showToast('Failed to copy.', 'error');
             }
+            document.body.removeChild(textArea);
         }
 
         function handleSaltModal() {
-            hideModal();
-            setTimeout(() => {
-                const title = "What Is The SALT Deduction Limit?";
-                const content = `<div class="space-y-4 text-slate-700">
-                    <p>Since 2018, there's a <strong>$10,000 yearly limit</strong> on how much you can deduct for state and local taxes. You claimed $15,000, but the maximum allowed is $10,000.</p>
-                    <div>
-                        <h4 class="font-bold text-black">What Counts As State and Local Taxes?</h4>
-                        <ul class="list-disc list-inside mt-2">
-                            <li>State income tax you paid</li>
-                            <li>Property taxes on your home</li>
-                            <li>Local city or county taxes</li>
-                        </ul>
-                        <p class="mt-2">All of these combined cannot exceed $10,000.</p>
-                    </div>
-                    <p>The IRS computer automatically checks all tax returns for this limit. When it found you claimed more than $10,000, it automatically reduced your deduction to the legal maximum.</p>
-                </div>`;
-                showModal(title, content);
-            }, 300); // Delay to allow first modal to close
+            const title = "What Is The SALT Deduction Limit?";
+            const content = `<div class="space-y-4 text-slate-700">
+                <p>Since 2018, there's a <strong>$10,000 yearly limit</strong> on how much you can deduct for state and local taxes. You claimed $15,000, but the maximum allowed is $10,000.</p>
+                <div>
+                    <h4 class="font-bold text-black">What Counts As State and Local Taxes?</h4>
+                    <ul class="list-disc list-inside mt-2">
+                        <li>State income tax you paid</li>
+                        <li>Property taxes on your home</li>
+                        <li>Local city or county taxes</li>
+                    </ul>
+                    <p class="mt-2">All of these combined cannot exceed $10,000.</p>
+                </div>
+                <p>The IRS computer automatically checks all tax returns for this limit. When it found you claimed more than $10,000, it automatically reduced your deduction to the legal maximum.</p>
+            </div>`;
+            showModal(title, content);
         }
 
         // --- Main Render Function ---
@@ -718,7 +727,6 @@
                         renderView();
                     });
                     
-                    // Close dropdown on outside click
                     document.addEventListener('click', (event) => {
                         const container = document.getElementById('country-dropdown-container');
                         if (container && !container.contains(event.target) && state.isDropdownOpen) {
@@ -745,7 +753,6 @@
                     item.addEventListener('click', (e) => handleHistoryClick(e.currentTarget.dataset.id));
                 });
 
-                // Upload logic
                 const dropZone = document.getElementById('drop-zone');
                 const fileInput = document.getElementById('file-input');
                 document.getElementById('select-file-btn').addEventListener('click', () => fileInput.click());
@@ -766,8 +773,8 @@
 
             } else if (view === 'summary') {
                 document.getElementById('reset-app-btn').addEventListener('click', resetApp);
-                document.querySelectorAll('.info-tile').forEach(tile => {
-                    tile.addEventListener('click', (e) => handleSummaryModal(e.currentTarget.dataset.id));
+                document.querySelectorAll('.info-tile-header').forEach(tile => {
+                    tile.addEventListener('click', (e) => handleAccordionToggle(e.currentTarget.parentElement.dataset.id));
                 });
                 document.getElementById('email-btn').addEventListener('click', () => {
                     const content = `<pre class="bg-slate-100 p-4 rounded-lg text-sm text-black whitespace-pre-wrap font-sans">${state.summaryData.emailTemplate}</pre>
@@ -788,3 +795,5 @@
     </script>
 </body>
 </html>
+
+
